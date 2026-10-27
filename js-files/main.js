@@ -2,8 +2,8 @@
 // Stormths - entry point: input, main loop, automatic quality
 // ---------------------------------------------------------------
 import { PRESETS, DEFAULT_LEVEL, MIN_FPS, WARMUP_MS } from './config.js';
-import { createContext } from './gl-utils.js';
-import { Simulation } from './simulation.js';
+import { createContext } from './graphics-utils.js';
+import { Simulation } from './sim.js';
 
 const canvas = document.getElementById('c');
 const statsEl = document.getElementById('stats');
