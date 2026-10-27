@@ -12,7 +12,7 @@ import {
 } from './shaders.js';
 import {
   compileShader, makeProgram, makeTarget, makePair, deleteTarget, clearTarget
-} from './gl-utils.js';
+} from './graphics-utils.js';
 
 export class Simulation {
   constructor(gl, hasFloat) {
