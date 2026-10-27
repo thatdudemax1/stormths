@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  background: #111;
+  color: #ccc;
+  font-family: monospace;
+}
+
+canvas {
+  display: block;
+  margin: 12px auto;
+  border: 1px solid #333;
+  width: min(96vw, 1200px);
+}
+
+#info {
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+#err {
+  text-align: center;
+  color: #f66;
+  white-space: pre-wrap;
+}
