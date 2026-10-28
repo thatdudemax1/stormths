@@ -26,7 +26,7 @@ try {
 // ---------------------------------------------------------------
 // Input
 // ---------------------------------------------------------------
-const mouse = { x: 0, y: 0, px: 0, py: 0, buttons: 0, shift: false };
+const mouse = { x: 0, y: 0, px: 0, py: 0, buttons: 0, shift: false, ctrl: false };
 
 function toGrid(e) {
   const r = canvas.getBoundingClientRect();
@@ -36,22 +36,28 @@ function toGrid(e) {
   ];
 }
 
+function readModifiers(e) {
+  mouse.buttons = e.buttons;
+  mouse.shift = e.shiftKey;
+  mouse.ctrl = e.ctrlKey;
+}
+
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('mousedown', e => {
   e.preventDefault();
   [mouse.x, mouse.y] = toGrid(e);
   mouse.px = mouse.x; mouse.py = mouse.y;
-  mouse.buttons = e.buttons; mouse.shift = e.shiftKey;
+  readModifiers(e);
 });
 canvas.addEventListener('mousemove', e => {
   [mouse.x, mouse.y] = toGrid(e);
-  mouse.buttons = e.buttons; mouse.shift = e.shiftKey;
+  readModifiers(e);
 });
 window.addEventListener('mouseup', e => { mouse.buttons = e.buttons; });
 
-const VIEWS = ['temperature', 'smoke', 'velocity'];
+const VIEWS = ['clouds', 'temperature', 'humidity', 'smoke', 'velocity'];
 let view = 0;
-let heating = false;
+let heating = true;
 let manualQuality = false;
 let autoNote = '';
 
@@ -70,10 +76,11 @@ window.addEventListener('keydown', e => {
 function readInput() {
   let mode = 0;
   if (mouse.buttons) {
-    if (mouse.shift) mode = 3;
-    else if (mouse.buttons & 1) mode = 1;
-    else if (mouse.buttons & 2) mode = 2;
-    else mode = 4; // push air only
+    if (mouse.shift) mode = 3;            // smoke
+    else if (mouse.ctrl) mode = 5;        // moisture
+    else if (mouse.buttons & 1) mode = 1; // heat
+    else if (mouse.buttons & 2) mode = 2; // cool
+    else mode = 4;                        // push air only
   }
   const dx = mouse.buttons ? mouse.x - mouse.px : 0;
   const dy = mouse.buttons ? mouse.y - mouse.py : 0;
