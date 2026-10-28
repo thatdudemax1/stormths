@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------
-// Stormths - entry point: input, main loop, automatic quality
+// Stormths - entry point: menu, input, main loop, automatic quality
 // ---------------------------------------------------------------
 import { PRESETS, DEFAULT_LEVEL, MIN_FPS, WARMUP_MS } from './config.js';
 import { createContext } from './graphics-utils.js';
@@ -61,7 +61,44 @@ let heating = true;
 let manualQuality = false;
 let autoNote = '';
 
+// ---------------------------------------------------------------
+// Start menu (the simulation keeps running behind it)
+// ---------------------------------------------------------------
+const menuEl = document.getElementById('menu');
+const panelMain = document.getElementById('panel-main');
+const panelCredits = document.getElementById('panel-credits');
+let menuOpen = true;
+
+function showPanel(panel) {
+  panelMain.classList.toggle('hidden', panel !== panelMain);
+  panelCredits.classList.toggle('hidden', panel !== panelCredits);
+}
+
+function openMenu() {
+  menuOpen = true;
+  showPanel(panelMain);
+  menuEl.classList.remove('hidden');
+}
+
+function closeMenu() {
+  menuOpen = false;
+  menuEl.classList.add('hidden');
+  mouse.buttons = 0;
+}
+
+document.getElementById('btn-play').addEventListener('click', closeMenu);
+document.getElementById('btn-credits').addEventListener('click', () => showPanel(panelCredits));
+document.getElementById('btn-back').addEventListener('click', () => showPanel(panelMain));
+
 window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (!menuOpen) openMenu();
+    else if (!panelCredits.classList.contains('hidden')) showPanel(panelMain);
+    else closeMenu();
+    return;
+  }
+  if (menuOpen) return; // game keys only work while playing
+
   const key = e.key.toLowerCase();
   if (key === 'v') view = (view + 1) % VIEWS.length;
   if (key === 'h') heating = !heating;
