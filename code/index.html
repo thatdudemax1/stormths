@@ -1,186 +1,44 @@
 <!DOCTYPE html>
-// ---------------------------------------------------------------
-// Stormths - entry point: menu, input, main loop, automatic quality
-// ---------------------------------------------------------------
-import { PRESETS, DEFAULT_LEVEL, MIN_FPS, WARMUP_MS } from './config.js';
-import { createContext } from './graphics-utils.js';
-import { Simulation } from './sim.js';
+<html>
+<head>
+<meta charset="utf-8">
+<title>Stormths</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛈️</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
 
-const canvas = document.getElementById('c');
-const statsEl = document.getElementById('stats');
-const errEl = document.getElementById('err');
+  <div id="menu">
+    <div class="panel" id="panel-main">
+      <h1>STORMTHS</h1>
+      <p class="subtitle">2D atmosphere sandbox</p>
+      <button id="btn-play">▶ Play</button>
+      <button id="btn-credits">ℹ Credits</button>
+    </div>
 
-function showError(e) {
-  errEl.textContent = 'Error: ' + (e && e.message ? e.message : e);
-  console.error(e);
-}
+    <div class="panel hidden" id="panel-credits">
+      <h2>Credits</h2>
+      <p>Created by <b>thatdudemax1</b></p>
+      <p>
+        Inspired by the <b>2D Weather Sandbox</b><br>
+        by <b>Niels Daemen (niels747)</b><br>
+        <a href="https://github.com/niels747/2D-Weather-Sandbox" target="_blank" rel="noopener">github.com/niels747/2D-Weather-Sandbox</a>
+      </p>
+      <p class="small">Stormths is an independent project written from scratch.<br>
+        Released under the MIT License.</p>
+      <button id="btn-back">← Back</button>
+    </div>
+  </div>
+</div>
 
-let sim;
-try {
-  const { gl, hasFloat } = createContext(canvas);
-  sim = new Simulation(gl, hasFloat);
-} catch (e) {
-  showError(e);
-  throw e;
-}
-
-// ---------------------------------------------------------------
-// Input
-// ---------------------------------------------------------------
-const mouse = { x: 0, y: 0, px: 0, py: 0, buttons: 0, shift: false, ctrl: false };
-
-function toGrid(e) {
-  const r = canvas.getBoundingClientRect();
-  return [
-    (e.clientX - r.left) / r.width * sim.w,
-    (1 - (e.clientY - r.top) / r.height) * sim.h,
-  ];
-}
-
-function readModifiers(e) {
-  mouse.buttons = e.buttons;
-  mouse.shift = e.shiftKey;
-  mouse.ctrl = e.ctrlKey;
-}
-
-canvas.addEventListener('contextmenu', e => e.preventDefault());
-canvas.addEventListener('mousedown', e => {
-  e.preventDefault();
-  [mouse.x, mouse.y] = toGrid(e);
-  mouse.px = mouse.x; mouse.py = mouse.y;
-  readModifiers(e);
-});
-canvas.addEventListener('mousemove', e => {
-  [mouse.x, mouse.y] = toGrid(e);
-  readModifiers(e);
-});
-window.addEventListener('mouseup', e => { mouse.buttons = e.buttons; });
-
-const VIEWS = ['clouds', 'temperature', 'humidity', 'smoke', 'velocity'];
-let view = 0;
-let heating = true;
-let manualQuality = false;
-let autoNote = '';
-
-// ---------------------------------------------------------------
-// Start menu (the simulation keeps running behind it)
-// ---------------------------------------------------------------
-const menuEl = document.getElementById('menu');
-const panelMain = document.getElementById('panel-main');
-const panelCredits = document.getElementById('panel-credits');
-let menuOpen = true;
-
-function showPanel(panel) {
-  panelMain.classList.toggle('hidden', panel !== panelMain);
-  panelCredits.classList.toggle('hidden', panel !== panelCredits);
-}
-
-function openMenu() {
-  menuOpen = true;
-  showPanel(panelMain);
-  menuEl.classList.remove('hidden');
-}
-
-function closeMenu() {
-  menuOpen = false;
-  menuEl.classList.add('hidden');
-  mouse.buttons = 0;
-}
-
-document.getElementById('btn-play').addEventListener('click', closeMenu);
-document.getElementById('btn-credits').addEventListener('click', () => showPanel(panelCredits));
-document.getElementById('btn-back').addEventListener('click', () => showPanel(panelMain));
-
-window.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (!menuOpen) openMenu();
-    else if (!panelCredits.classList.contains('hidden')) showPanel(panelMain);
-    else closeMenu();
-    return;
-  }
-  if (menuOpen) return; // game keys only work while playing
-
-  const key = e.key.toLowerCase();
-  if (key === 'v') view = (view + 1) % VIEWS.length;
-  if (key === 'h') heating = !heating;
-  if (key === 'r') sim.reset();
-  if (key >= '1' && key <= '4') {
-    manualQuality = true;
-    autoNote = '';
-    sim.build(Number(key) - 1);
-  }
-});
-
-function readInput() {
-  let mode = 0;
-  if (mouse.buttons) {
-    if (mouse.shift) mode = 3;            // smoke
-    else if (mouse.ctrl) mode = 5;        // moisture
-    else if (mouse.buttons & 1) mode = 1; // heat
-    else if (mouse.buttons & 2) mode = 2; // cool
-    else mode = 4;                        // push air only
-  }
-  const dx = mouse.buttons ? mouse.x - mouse.px : 0;
-  const dy = mouse.buttons ? mouse.y - mouse.py : 0;
-  mouse.px = mouse.x; mouse.py = mouse.y;
-  return { mode, x: mouse.x, y: mouse.y, dx, dy, heating };
-}
-
-// ---------------------------------------------------------------
-// Startup quality (?q=0..3 forces a preset)
-// ---------------------------------------------------------------
-let startLevel = DEFAULT_LEVEL;
-const params = new URLSearchParams(location.search);
-if (params.has('q')) {
-  const q = Number(params.get('q'));
-  if (q >= 0 && q < PRESETS.length) {
-    startLevel = q;
-    manualQuality = true;
-  }
-}
-
-try {
-  sim.build(startLevel);
-} catch (e) {
-  showError(e);
-  throw e;
-}
-
-// ---------------------------------------------------------------
-// Main loop
-// ---------------------------------------------------------------
-let fpsFrames = 0;
-let fpsLast = performance.now();
-
-function updateStats(now) {
-  const fps = fpsFrames * 1000 / (now - fpsLast);
-  fpsFrames = 0;
-  fpsLast = now;
-
-  // Drop quality if this computer can't keep up
-  if (!manualQuality && now - sim.builtAt > WARMUP_MS &&
-      fps < MIN_FPS && sim.level > 0) {
-    sim.build(sim.level - 1);
-    autoNote = ' | Auto-lowered quality';
-  }
-
-  statsEl.textContent =
-    `${sim.preset.name} ${sim.w}x${sim.h} (${sim.half ? '16' : '32'}-bit) | ` +
-    `GPU ~${sim.memMB.toFixed(1)} MB | ${fps.toFixed(0)} FPS | ` +
-    `View: ${VIEWS[view]} | Ground heating: ${heating ? 'ON' : 'OFF'}` + autoNote;
-}
-
-function loop(now) {
-  try {
-    sim.step(readInput());
-    sim.render(view);
-  } catch (e) {
-    showError(e);
-    return; // stop the loop on errors
-  }
-  fpsFrames++;
-  if (now - fpsLast > 1000) updateStats(now);
-  requestAnimationFrame(loop);
-}
-
-requestAnimationFrame(loop);
+<div id="info">
+  Left drag: heat | Right drag: cool | Shift + drag: smoke | Ctrl + drag: moisture | Middle drag: push air<br>
+  H: ground heating | V: cycle view | R: reset | 1-4: quality | Esc: menu<br>
+  <span id="stats"></span>
+</div>
+<div id="err"></div>
+<script type="module" src="../js-files/main.js"></script>
+</body>
+</html>
